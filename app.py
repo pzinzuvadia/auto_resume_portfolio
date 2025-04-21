@@ -206,10 +206,11 @@ def main():
                 st.write(f"Email: {st.session_state.resume_data.get('email', 'Not found')}")
                 st.write(f"Phone: {st.session_state.resume_data.get('phone', 'Not found')}")
                 
-                # Display sections
+                # Display sections (using header and markdown instead of nested expanders)
                 for section_name, section_content in st.session_state.resume_data.get("sections", {}).items():
-                    with st.expander(f"{section_name}"):
-                        st.write(section_content)
+                    st.subheader(f"{section_name}")
+                    st.markdown(section_content)
+                    st.divider()  # Add a divider between sections
             
             # Theme selection
             # Use the themes from session state
