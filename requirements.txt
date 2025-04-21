@@ -12,3 +12,5 @@ uvicorn==0.27.1
 pydantic
 python-multipart
 requests
+pdfplumber
+pandas
