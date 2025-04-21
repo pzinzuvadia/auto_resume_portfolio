@@ -125,8 +125,14 @@ def main():
         # API Key section in sidebar
         with st.sidebar:
             st.header("API Configuration")
-            claude_api_key = st.text_input("Claude API Key", type="password", help="Enter your Anthropic Claude API key")
-            st.info("Your API key is required to use the AI features. It's stored only in your session.")
+            # Using environment variable for API key
+            import os
+            claude_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+            if claude_api_key:
+                st.success("Claude API key detected!")
+            else:
+                claude_api_key = st.text_input("Claude API Key", type="password", help="Enter your Anthropic Claude API key")
+                st.info("Your API key is required to use the AI features. It's stored only in your session.")
         
         # File uploader for resume
         uploaded_file = st.file_uploader("Upload your resume (PDF format only)", type=["pdf"])
@@ -140,11 +146,11 @@ def main():
                 with st.spinner("Extracting information from your resume..."):
                     try:
                         # Get resume information
-                        st.session_state.resume_data = extract_resume_info(uploaded_file)
+                        st.session_state.resume_data = asyncio.run(extract_resume_info(uploaded_file))
                         st.success("Resume information extracted successfully!")
                         
                         # Get available themes
-                        st.session_state.themes = get_themes()
+                        st.session_state.themes = asyncio.run(get_themes())
                         
                         # Suggest going to the next tab
                         st.info("Proceed to the 'Customize Theme' tab to continue.")
