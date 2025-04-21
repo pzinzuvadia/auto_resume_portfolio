@@ -18,14 +18,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Portfolio Generator App"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "FastAPI Backend"
+args = "AI Portfolio Generator"
 
 [[workflows.workflow]]
-name = "Portfolio Generator App"
+name = "AI Portfolio Generator"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -36,23 +32,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port 5000"
+args = "./start.sh"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "FastAPI Backend"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m uvicorn api:app --host 0.0.0.0 --port 8000"
-waitForPort = 8000
 
 [[ports]]
 localPort = 5000
