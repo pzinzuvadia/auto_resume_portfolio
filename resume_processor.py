@@ -42,23 +42,23 @@ class ResumeProcessor:
         """
         # Common section headers in resumes
         section_patterns = [
-            r'(?i)(EDUCATION|ACADEMIC BACKGROUND)',
-            r'(?i)(EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT|PROFESSIONAL EXPERIENCE)',
-            r'(?i)(SKILLS|TECHNICAL SKILLS|KEY SKILLS)',
-            r'(?i)(PROJECTS|KEY PROJECTS)',
-            r'(?i)(CERTIFICATIONS|CERTIFICATES)',
-            r'(?i)(PUBLICATIONS|RESEARCH)',
-            r'(?i)(AWARDS|HONORS|ACHIEVEMENTS)',
-            r'(?i)(VOLUNTEER|COMMUNITY SERVICE)',
-            r'(?i)(LANGUAGES|LANGUAGE PROFICIENCY)',
-            r'(?i)(INTERESTS|HOBBIES)'
+            r'(EDUCATION|ACADEMIC BACKGROUND)',
+            r'(EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT|PROFESSIONAL EXPERIENCE)',
+            r'(SKILLS|TECHNICAL SKILLS|KEY SKILLS)',
+            r'(PROJECTS|KEY PROJECTS)',
+            r'(CERTIFICATIONS|CERTIFICATES)',
+            r'(PUBLICATIONS|RESEARCH)',
+            r'(AWARDS|HONORS|ACHIEVEMENTS)',
+            r'(VOLUNTEER|COMMUNITY SERVICE)',
+            r'(LANGUAGES|LANGUAGE PROFICIENCY)',
+            r'(INTERESTS|HOBBIES)'
         ]
         
         # Combine patterns into a single regex
         combined_pattern = '|'.join(section_patterns)
         
-        # Find all section headers
-        matches = list(re.finditer(combined_pattern, text))
+        # Find all section headers (case insensitive)
+        matches = list(re.finditer(combined_pattern, text, re.IGNORECASE))
         
         sections = {}
         if not matches:
