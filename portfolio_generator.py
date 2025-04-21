@@ -37,23 +37,124 @@ class PortfolioGenerator:
         email = resume_data.get("email", "")
         phone = resume_data.get("phone", "")
         
+        # Special parsing for each section type
         sections_text = ""
         for section_name, section_content in resume_data.get("sections", {}).items():
-            sections_text += f"## {section_name}\n{section_content}\n\n"
+            if section_name.upper() == "EXPERIENCE":
+                sections_text += f"## EXPERIENCE\n"
+                # Process the experience section to clearly separate multiple experiences
+                experiences = self._parse_experiences(section_content)
+                for i, exp in enumerate(experiences):
+                    sections_text += f"### Experience {i+1}\n{exp}\n\n"
+            else:
+                sections_text += f"## {section_name}\n{section_content}\n\n"
         
         prompt = (
             f"Create a professional portfolio website for {full_name}.\n\n"
             f"Contact information:\n"
             f"- Email: {email}\n"
-            f"- Phone: {phone}\n\n"
+            f"- Phone: {phone} (IMPORTANT: Make sure to display this exact phone number in the portfolio)\n\n"
             f"Resume content:\n{sections_text}\n"
             f"Design preferences: {theme_preferences}\n\n"
             "Generate a complete HTML file that includes all CSS and JavaScript needed for "
             "a responsive, modern portfolio website. The website should be a single HTML file "
-            "that looks professional and showcases the person's skills and experience effectively."
+            "that looks professional and showcases the person's skills and experience effectively.\n\n"
+            "IMPORTANT GUIDELINES:\n"
+            "1. Make sure to include ALL experiences listed in the resume, not just the most recent one.\n"
+            "2. Display the exact phone number provided above - this is critical.\n"
+            "3. Create separate sections or cards for each work experience.\n"
+            "4. List each experience with its job title, company, dates, and bullet points.\n"
+            "5. Make sure the contact information is prominently displayed and accurate.\n"
         )
         
         return prompt
+        
+    def _parse_experiences(self, experience_text):
+        """
+        Parse the experience section to identify individual experiences.
+        
+        Args:
+            experience_text: Text content of the experience section.
+            
+        Returns:
+            List of separate experience entries.
+        """
+        import re
+        
+        # First, try to split by company or job titles
+        # Common patterns like "Software Developer, Company" or "Company - Position"
+        experiences = []
+        
+        # Try to split by date ranges as they typically separate different jobs
+        date_pattern = r'(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[\s,]+\d{4}\s*[-–—]\s*(?:Present|Current|January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?:[\s,]+\d{4})?'
+        
+        # Split the experience text by date pattern
+        date_matches = list(re.finditer(date_pattern, experience_text, re.IGNORECASE))
+        
+        if date_matches:
+            # If we found date patterns, use them to split the text
+            last_end = 0
+            for i, match in enumerate(date_matches):
+                start = match.start()
+                
+                # Skip if this is part of a previous experience
+                if start < last_end:
+                    continue
+                
+                # Find the beginning of this experience (typically a job title or company name)
+                # Look for the previous line break before the date
+                prev_break = experience_text.rfind('\n', 0, start)
+                if prev_break == -1:
+                    prev_break = 0
+                
+                # Extract the experience, going back to include the job title
+                if i < len(date_matches) - 1:
+                    # For all but the last experience, go to the next date match
+                    next_match = date_matches[i + 1]
+                    end = next_match.start()
+                    
+                    # But find the line break before to get a clean break
+                    prev_break_next = experience_text.rfind('\n', 0, end)
+                    if prev_break_next > start:  # Make sure we're not going backwards
+                        end = prev_break_next
+                    
+                    experiences.append(experience_text[prev_break:end].strip())
+                    last_end = end
+                else:
+                    # For the last experience, go to the end
+                    experiences.append(experience_text[prev_break:].strip())
+                    
+            # If we didn't parse any experiences, fall back to the full text
+            if not experiences:
+                experiences = [experience_text]
+        else:
+            # If we can't find date patterns, try splitting by job titles
+            job_pattern = r'\n[A-Z][a-zA-Z\s,]+(Developer|Engineer|Designer|Manager|Director|Analyst|Consultant|Specialist|Coordinator|Assistant|Lead|Head|Chief|Officer|Administrator|Supervisor)'
+            job_matches = list(re.finditer(job_pattern, '\n' + experience_text, re.IGNORECASE))
+            
+            if job_matches:
+                # If we found job title patterns, use them to split the text
+                for i, match in enumerate(job_matches):
+                    start = match.start()
+                    
+                    # Skip the leading newline
+                    if start == 0:
+                        start = 1
+                    
+                    if i < len(job_matches) - 1:
+                        end = job_matches[i + 1].start()
+                        experiences.append(experience_text[start:end].strip())
+                    else:
+                        experiences.append(experience_text[start:].strip())
+                        
+                # If we didn't parse any experiences, fall back to the full text
+                if not experiences:
+                    experiences = [experience_text]
+            else:
+                # If we can't find any patterns, just use the whole text as one experience
+                experiences = [experience_text]
+        
+        return experiences
     
     def generate_portfolio(self, resume_data, theme):
         """

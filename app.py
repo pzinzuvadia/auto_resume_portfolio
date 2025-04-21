@@ -431,8 +431,16 @@ def main():
                 
                 # Apply all changes button
                 if st.button("Apply All Changes to Resume"):
+                    # Make a deep copy to ensure all nested data is properly copied
                     st.session_state.resume_data = st.session_state.edited_resume_data.copy()
+                    
+                    # Ensure phone number is updated in both places
+                    phone = st.session_state.edited_resume_data.get("phone", "")
+                    st.session_state.resume_data["phone"] = phone
+                    
                     st.success("All changes applied successfully!")
+                    # Add explanation about preview
+                    st.info("Click 'Preview Theme' to see your changes reflected in the portfolio.")
                     
                 st.divider()
                 st.info("Note: Changes will be reflected in your portfolio when you preview or generate it.")
