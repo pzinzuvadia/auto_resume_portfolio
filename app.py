@@ -142,7 +142,7 @@ def main():
     # Tab 1: Upload and process resume
     with tab1:
         st.header("Resume Information")
-        st.write("Upload your resume or enter information manually.")
+        st.write("Upload your resume to extract information automatically.")
         
         # API Key section in sidebar
         with st.sidebar:
@@ -156,119 +156,16 @@ def main():
                 claude_api_key = st.text_input("Claude API Key", type="password", help="Enter your Anthropic Claude API key")
                 st.info("Your API key is required to use the AI features. It's stored only in your session.")
         
-        # Create tabs for different input methods
-        input_method = st.radio("Choose input method:", ["Upload Resume", "Enter Manually", "Use Sample Resume"])
+        # File uploader for resume
+        uploaded_file = st.file_uploader("Upload your resume (PDF format only)", type=["pdf"])
         
-        if input_method == "Upload Resume":
-            # File uploader for resume
-            uploaded_file = st.file_uploader("Upload your resume (PDF format only)", type=["pdf"])
+        if uploaded_file is not None:
+            # Display file details
+            st.write(f"File name: {uploaded_file.name}")
             
-            if uploaded_file is not None:
-                # Display file details
-                st.write(f"File name: {uploaded_file.name}")
-                
-                # Extract resume information button
-                if st.button("Extract Resume Information"):
-                    with st.spinner("Extracting information from your resume..."):
-                        try:
-                            # Use nest_asyncio to allow running asyncio in Streamlit
-                            import nest_asyncio
-                            nest_asyncio.apply()
-                            
-                            # Create a new event loop
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            
-                            # Get resume information
-                            st.session_state.resume_data = loop.run_until_complete(extract_resume_info(uploaded_file))
-                            st.success("Resume information extracted successfully!")
-                            
-                            # Get available themes
-                            st.session_state.themes = loop.run_until_complete(get_themes())
-                            
-                            # Cleanup
-                            loop.close()
-                            
-                            # Suggest going to the next tab
-                            st.info("Proceed to the 'Customize Theme' tab to continue.")
-                        except Exception as e:
-                            show_error(str(e))
-                            
-        elif input_method == "Enter Manually":
-            st.subheader("Enter Your Information")
-            
-            # Personal information
-            st.write("#### Personal Information")
-            name = st.text_input("Name")
-            email = st.text_input("Email")
-            phone = st.text_input("Phone")
-            
-            # Education section
-            st.write("#### Education")
-            education = st.text_area("Education", height=100, 
-                                    placeholder="University of Example\nBachelor of Science in Computer Science, 2018-2022\nGPA: 3.8/4.0")
-            
-            # Experience section
-            st.write("#### Experience")
-            experience = st.text_area("Work Experience", height=100,
-                                    placeholder="Software Developer, Tech Company\nJune 2022 - Present\n- Developed web applications\n- Implemented APIs")
-            
-            # Skills section
-            st.write("#### Skills")
-            skills = st.text_area("Skills", height=100,
-                                placeholder="Programming: Python, JavaScript\nWeb: React, Node.js\nDatabases: PostgreSQL, MongoDB")
-            
-            # Projects section
-            st.write("#### Projects")
-            projects = st.text_area("Projects", height=100,
-                                  placeholder="Portfolio Website\n- Built with React\n- Responsive design")
-            
-            # Additional sections
-            st.write("#### Additional Sections (Optional)")
-            with st.expander("Add Certifications"):
-                certifications = st.text_area("Certifications", height=100,
-                                            placeholder="AWS Certified Developer\nGoogle Cloud Certified")
-            
-            with st.expander("Add Publications"):
-                publications = st.text_area("Publications", height=100,
-                                         placeholder="Title of Paper, Journal Name, 2023")
-            
-            with st.expander("Add Achievements"):
-                achievements = st.text_area("Achievements", height=100,
-                                         placeholder="Winner, Hackathon 2023\nDean's List, 2020-2022")
-            
-            # Create resume button
-            if st.button("Create Resume"):
-                # Create sections dictionary
-                sections = {}
-                if education:
-                    sections["EDUCATION"] = education
-                if experience:
-                    sections["EXPERIENCE"] = experience
-                if skills:
-                    sections["SKILLS"] = skills
-                if projects:
-                    sections["PROJECTS"] = projects
-                if certifications:
-                    sections["CERTIFICATIONS"] = certifications
-                if publications:
-                    sections["PUBLICATIONS"] = publications
-                if achievements:
-                    sections["AWARDS"] = achievements
-                
-                # Create resume data
-                resume_data = {
-                    "name": name,
-                    "email": email,
-                    "phone": phone,
-                    "sections": sections,
-                    "full_text": "\n\n".join([f"{section_name}\n{section_content}" for section_name, section_content in sections.items()])
-                }
-                
-                # Validate
-                if not name or not email or len(sections) == 0:
-                    st.warning("Please enter at least your name, email, and one section.")
-                else:
+            # Extract resume information button
+            if st.button("Extract Resume Information"):
+                with st.spinner("Extracting information from your resume..."):
                     try:
                         # Use nest_asyncio to allow running asyncio in Streamlit
                         import nest_asyncio
@@ -278,52 +175,21 @@ def main():
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
                         
+                        # Get resume information
+                        st.session_state.resume_data = loop.run_until_complete(extract_resume_info(uploaded_file))
+                        st.success("Resume information extracted successfully!")
+                        
                         # Get available themes
                         st.session_state.themes = loop.run_until_complete(get_themes())
                         
                         # Cleanup
                         loop.close()
                         
-                        # Store in session state
-                        st.session_state.resume_data = resume_data
-                        
-                        # Success message
-                        st.success("Resume information created successfully!")
+                        # Suggest going to the next tab
                         st.info("Proceed to the 'Customize Theme' tab to continue.")
                     except Exception as e:
                         show_error(str(e))
-                        
-        elif input_method == "Use Sample Resume":
-            st.write("You can use our sample resume to test the functionality.")
-            if st.button("Load Sample Resume"):
-                try:
-                    # Use sample resume
-                    with open("sample_resume.pdf", "rb") as file:
-                        sample_file = io.BytesIO(file.read())
-                        sample_file.name = "sample_resume.pdf"
-                    
-                    # Use nest_asyncio to allow running asyncio in Streamlit
-                    import nest_asyncio
-                    nest_asyncio.apply()
-                    
-                    # Create a new event loop
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    
-                    # Get resume information
-                    st.session_state.resume_data = loop.run_until_complete(extract_resume_info(sample_file))
-                    
-                    # Get available themes
-                    st.session_state.themes = loop.run_until_complete(get_themes())
-                    
-                    # Cleanup
-                    loop.close()
-                    
-                    # Success message
-                    st.success("Sample resume processed successfully!")
-                    st.info("Proceed to the 'Customize Theme' tab to continue.")
-                except Exception as e:
-                    show_error(f"Failed to process sample resume: {str(e)}")
+
 
     # Tab 2: Theme customization
     with tab2:
