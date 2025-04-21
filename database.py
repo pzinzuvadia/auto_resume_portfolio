@@ -1,14 +1,41 @@
 import os
 from datetime import datetime
+import ssl
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.pool import QueuePool
 
 # Get database URL from environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///portfolio_generator.db")
 
-# Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+# For PostgreSQL, we need to ensure SSL is handled properly
+connect_args = {}
+if DATABASE_URL.startswith('postgresql'):
+    # Configure SSL context for PostgreSQL
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    connect_args = {
+        "connect_timeout": 10,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+        "sslmode": "require"
+    }
+
+# Create SQLAlchemy engine with connection pooling and retry settings
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    poolclass=QueuePool,
+    pool_size=5,
+    max_overflow=10,
+    pool_timeout=30,
+    pool_recycle=1800  # Recycle connections after 30 minutes
+)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

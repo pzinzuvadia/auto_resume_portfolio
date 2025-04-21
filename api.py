@@ -152,52 +152,93 @@ async def save_portfolio(
     Returns:
         JSON with saved portfolio ID.
     """
-    try:
-        # Parse resume data
-        resume_info = json.loads(resume_data)
-        
-        # Check if user exists, create if not
-        user = db.query(User).filter(User.email == email).first()
-        if not user:
-            user = User(email=email)
-            db.add(user)
+    # Implement retry logic for database operations
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            # Parse resume data
+            resume_info = json.loads(resume_data)
+            
+            # Check if user exists, create if not
+            user = db.query(User).filter(User.email == email).first()
+            if not user:
+                user = User(email=email)
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            
+            # Create new portfolio
+            portfolio = Portfolio(
+                user_id=user.id,
+                name=portfolio_name,
+                theme=theme,
+                html_content=html_content
+            )
+            db.add(portfolio)
             db.commit()
-            db.refresh(user)
-        
-        # Create new portfolio
-        portfolio = Portfolio(
-            user_id=user.id,
-            name=portfolio_name,
-            theme=theme,
-            html_content=html_content
-        )
-        db.add(portfolio)
-        db.commit()
-        db.refresh(portfolio)
-        
-        # Create resume record
-        resume = Resume(
-            portfolio_id=portfolio.id,
-            filename=resume_info.get("filename", "uploaded_resume.pdf"),
-            content_text=resume_info.get("full_text", ""),
-            extracted_name=resume_info.get("name", ""),
-            extracted_email=resume_info.get("email", ""),
-            extracted_phone=resume_info.get("phone", ""),
-            sections_json=json.dumps(resume_info.get("sections", {}))
-        )
-        db.add(resume)
-        db.commit()
-        
-        return JSONResponse(
-            content={"status": "success", "portfolio_id": portfolio.id},
-            status_code=200
-        )
-    except Exception as e:
-        db.rollback()
-        return JSONResponse(
-            content={"status": "error", "message": str(e)},
-            status_code=500
-        )
+            db.refresh(portfolio)
+            
+            # Create resume record
+            resume = Resume(
+                portfolio_id=portfolio.id,
+                filename=resume_info.get("filename", "uploaded_resume.pdf"),
+                content_text=resume_info.get("full_text", ""),
+                extracted_name=resume_info.get("name", ""),
+                extracted_email=resume_info.get("email", ""),
+                extracted_phone=resume_info.get("phone", ""),
+                sections_json=json.dumps(resume_info.get("sections", {}))
+            )
+            db.add(resume)
+            db.commit()
+            
+            return JSONResponse(
+                content={"status": "success", "portfolio_id": portfolio.id},
+                status_code=200
+            )
+            
+        except Exception as db_error:
+            db.rollback()
+            retry_count += 1
+            
+            # Log details about the error
+            print(f"Database error on attempt {retry_count}/{max_retries}: {str(db_error)}")
+            
+            if "SSL connection has been closed unexpectedly" in str(db_error) or "connection already closed" in str(db_error):
+                # These are connection issues that might be resolved with a retry
+                print("Detected SSL/connection issue, will retry with a new session")
+                
+                # Wait before retrying
+                import time
+                time.sleep(1 * retry_count)  # Progressive backoff
+                
+                # Get a fresh DB session
+                db.close()
+                db = next(get_db())
+            elif retry_count >= max_retries:
+                # We've exhausted retries, return error to client
+                return JSONResponse(
+                    content={"status": "error", "message": f"Failed to save portfolio after {max_retries} attempts: {str(db_error)}"},
+                    status_code=500
+                )
+            else:
+                # For other errors, also retry but log differently
+                print(f"Unexpected database error, retrying: {str(db_error)}")
+                
+                # Wait before retrying
+                import time
+                time.sleep(1 * retry_count)
+                
+                # Get a fresh DB session
+                db.close()
+                db = next(get_db())
+    
+    # This should not be reached but just in case
+    return JSONResponse(
+        content={"status": "error", "message": "Failed to save portfolio after multiple attempts, please try again later"},
+        status_code=500
+    )
 
 @app.get("/user-portfolios/{email}")
 async def get_user_portfolios(email: str, db: Session = Depends(get_db)):
