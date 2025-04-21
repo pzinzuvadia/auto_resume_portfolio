@@ -1,55 +1,28 @@
-"""
-Streamlit deployment file for AI Portfolio Generator
-This file starts both the FastAPI backend and Streamlit frontend
-"""
-import subprocess
-import threading
-import time
 import streamlit as st
-import sys
-import os
+import requests
 
-# Set page configuration
-st.set_page_config(
-    page_title="AI Portfolio Generator",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="AI Portfolio Generator", page_icon="🚀", layout="wide")
+st.title("🚀 AI Portfolio Generator")
 
-# Check for required environment variables
-required_vars = ["ANTHROPIC_API_KEY"]
-missing_vars = [var for var in required_vars if not os.environ.get(var)]
+BACKEND_URL = "https://auto-resume-portfolio.onrender.com"
 
-if missing_vars:
-    st.error(f"Missing required environment variables: {', '.join(missing_vars)}")
-    st.info("Please set these variables in your Streamlit Cloud secrets.")
-    st.stop()
+st.write("Click the button below to check if the backend is live:")
 
-# Start FastAPI backend in a separate thread
-def start_backend():
+try:
+    response = requests.get(f"{BACKEND_URL}/health", timeout=3)
+    if response.ok:
+        st.success("Backend is connected ✅")
+    else:
+        st.warning("Backend responded, but not OK ❗️")
+except Exception as e:
+    st.warning(f"Could not connect to backend: {e}")
+
+if st.button("Check Backend Again"):
     try:
-        process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        # Wait for the backend to start
-        time.sleep(5)
-        return process
+        response = requests.get(f"{BACKEND_URL}/health", timeout=3)
+        if response.ok:
+            st.success("Backend is healthy!")
+        else:
+            st.error("Backend returned an error.")
     except Exception as e:
-        st.error(f"Error starting backend: {str(e)}")
-        return None
-
-# Start backend in a thread
-backend_thread = threading.Thread(target=start_backend)
-backend_thread.daemon = True
-backend_thread.start()
-
-# Wait for backend to start
-time.sleep(5)
-
-# Import and run the main Streamlit app
-import app
-app.main()
+        st.error(f"Could not reach backend: {e}")
