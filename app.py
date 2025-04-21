@@ -141,8 +141,8 @@ def main():
     
     # Tab 1: Upload and process resume
     with tab1:
-        st.header("Upload Your Resume")
-        st.write("Upload your resume to extract information for your portfolio.")
+        st.header("Resume Information")
+        st.write("Upload your resume or enter information manually.")
         
         # API Key section in sidebar
         with st.sidebar:
@@ -156,16 +156,119 @@ def main():
                 claude_api_key = st.text_input("Claude API Key", type="password", help="Enter your Anthropic Claude API key")
                 st.info("Your API key is required to use the AI features. It's stored only in your session.")
         
-        # File uploader for resume
-        uploaded_file = st.file_uploader("Upload your resume (PDF format only)", type=["pdf"])
+        # Create tabs for different input methods
+        input_method = st.radio("Choose input method:", ["Upload Resume", "Enter Manually", "Use Sample Resume"])
         
-        if uploaded_file is not None:
-            # Display file details
-            st.write(f"File name: {uploaded_file.name}")
+        if input_method == "Upload Resume":
+            # File uploader for resume
+            uploaded_file = st.file_uploader("Upload your resume (PDF format only)", type=["pdf"])
             
-            # Extract resume information button
-            if st.button("Extract Resume Information"):
-                with st.spinner("Extracting information from your resume..."):
+            if uploaded_file is not None:
+                # Display file details
+                st.write(f"File name: {uploaded_file.name}")
+                
+                # Extract resume information button
+                if st.button("Extract Resume Information"):
+                    with st.spinner("Extracting information from your resume..."):
+                        try:
+                            # Use nest_asyncio to allow running asyncio in Streamlit
+                            import nest_asyncio
+                            nest_asyncio.apply()
+                            
+                            # Create a new event loop
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            
+                            # Get resume information
+                            st.session_state.resume_data = loop.run_until_complete(extract_resume_info(uploaded_file))
+                            st.success("Resume information extracted successfully!")
+                            
+                            # Get available themes
+                            st.session_state.themes = loop.run_until_complete(get_themes())
+                            
+                            # Cleanup
+                            loop.close()
+                            
+                            # Suggest going to the next tab
+                            st.info("Proceed to the 'Customize Theme' tab to continue.")
+                        except Exception as e:
+                            show_error(str(e))
+                            
+        elif input_method == "Enter Manually":
+            st.subheader("Enter Your Information")
+            
+            # Personal information
+            st.write("#### Personal Information")
+            name = st.text_input("Name")
+            email = st.text_input("Email")
+            phone = st.text_input("Phone")
+            
+            # Education section
+            st.write("#### Education")
+            education = st.text_area("Education", height=100, 
+                                    placeholder="University of Example\nBachelor of Science in Computer Science, 2018-2022\nGPA: 3.8/4.0")
+            
+            # Experience section
+            st.write("#### Experience")
+            experience = st.text_area("Work Experience", height=100,
+                                    placeholder="Software Developer, Tech Company\nJune 2022 - Present\n- Developed web applications\n- Implemented APIs")
+            
+            # Skills section
+            st.write("#### Skills")
+            skills = st.text_area("Skills", height=100,
+                                placeholder="Programming: Python, JavaScript\nWeb: React, Node.js\nDatabases: PostgreSQL, MongoDB")
+            
+            # Projects section
+            st.write("#### Projects")
+            projects = st.text_area("Projects", height=100,
+                                  placeholder="Portfolio Website\n- Built with React\n- Responsive design")
+            
+            # Additional sections
+            st.write("#### Additional Sections (Optional)")
+            with st.expander("Add Certifications"):
+                certifications = st.text_area("Certifications", height=100,
+                                            placeholder="AWS Certified Developer\nGoogle Cloud Certified")
+            
+            with st.expander("Add Publications"):
+                publications = st.text_area("Publications", height=100,
+                                         placeholder="Title of Paper, Journal Name, 2023")
+            
+            with st.expander("Add Achievements"):
+                achievements = st.text_area("Achievements", height=100,
+                                         placeholder="Winner, Hackathon 2023\nDean's List, 2020-2022")
+            
+            # Create resume button
+            if st.button("Create Resume"):
+                # Create sections dictionary
+                sections = {}
+                if education:
+                    sections["EDUCATION"] = education
+                if experience:
+                    sections["EXPERIENCE"] = experience
+                if skills:
+                    sections["SKILLS"] = skills
+                if projects:
+                    sections["PROJECTS"] = projects
+                if certifications:
+                    sections["CERTIFICATIONS"] = certifications
+                if publications:
+                    sections["PUBLICATIONS"] = publications
+                if achievements:
+                    sections["AWARDS"] = achievements
+                
+                # Create resume data
+                resume_data = {
+                    "name": name,
+                    "email": email,
+                    "phone": phone,
+                    "sections": sections,
+                    "full_text": "\n\n".join([f"{section_name}\n{section_content}" for section_name, section_content in sections.items()])
+                }
+                
+                # Validate
+                if not name or not email or len(sections) == 0:
+                    st.warning("Please enter at least your name, email, and one section.")
+                else:
                     try:
                         # Use nest_asyncio to allow running asyncio in Streamlit
                         import nest_asyncio
@@ -175,20 +278,52 @@ def main():
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
                         
-                        # Get resume information
-                        st.session_state.resume_data = loop.run_until_complete(extract_resume_info(uploaded_file))
-                        st.success("Resume information extracted successfully!")
-                        
                         # Get available themes
                         st.session_state.themes = loop.run_until_complete(get_themes())
                         
                         # Cleanup
                         loop.close()
                         
-                        # Suggest going to the next tab
+                        # Store in session state
+                        st.session_state.resume_data = resume_data
+                        
+                        # Success message
+                        st.success("Resume information created successfully!")
                         st.info("Proceed to the 'Customize Theme' tab to continue.")
                     except Exception as e:
                         show_error(str(e))
+                        
+        elif input_method == "Use Sample Resume":
+            st.write("You can use our sample resume to test the functionality.")
+            if st.button("Load Sample Resume"):
+                try:
+                    # Use sample resume
+                    with open("sample_resume.pdf", "rb") as file:
+                        sample_file = io.BytesIO(file.read())
+                        sample_file.name = "sample_resume.pdf"
+                    
+                    # Use nest_asyncio to allow running asyncio in Streamlit
+                    import nest_asyncio
+                    nest_asyncio.apply()
+                    
+                    # Create a new event loop
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
+                    # Get resume information
+                    st.session_state.resume_data = loop.run_until_complete(extract_resume_info(sample_file))
+                    
+                    # Get available themes
+                    st.session_state.themes = loop.run_until_complete(get_themes())
+                    
+                    # Cleanup
+                    loop.close()
+                    
+                    # Success message
+                    st.success("Sample resume processed successfully!")
+                    st.info("Proceed to the 'Customize Theme' tab to continue.")
+                except Exception as e:
+                    show_error(f"Failed to process sample resume: {str(e)}")
 
     # Tab 2: Theme customization
     with tab2:
@@ -198,19 +333,98 @@ def main():
         if st.session_state.resume_data is None:
             st.info("Please upload and extract your resume information in the 'Upload Resume' tab first.")
         else:
-            # Display extracted resume information
-            with st.expander("View Extracted Resume Information"):
-                # Display name, email, phone
-                st.subheader("Personal Information")
-                st.write(f"Name: {st.session_state.resume_data.get('name', 'Not found')}")
-                st.write(f"Email: {st.session_state.resume_data.get('email', 'Not found')}")
-                st.write(f"Phone: {st.session_state.resume_data.get('phone', 'Not found')}")
+            # Display and edit extracted resume information
+            with st.expander("Edit Resume Information"):
+                # Initialize session state for editing if not already present
+                if "editing_resume" not in st.session_state:
+                    st.session_state.editing_resume = False
+                    st.session_state.edited_resume_data = st.session_state.resume_data.copy()
                 
-                # Display sections (using header and markdown instead of nested expanders)
-                for section_name, section_content in st.session_state.resume_data.get("sections", {}).items():
-                    st.subheader(f"{section_name}")
-                    st.markdown(section_content)
-                    st.divider()  # Add a divider between sections
+                # Edit personal information
+                st.subheader("Personal Information")
+                
+                # Create columns for displaying and editing
+                col1, col2, col3 = st.columns([1, 2, 1])
+                
+                with col1:
+                    st.write("Name:")
+                with col2:
+                    st.session_state.edited_resume_data["name"] = st.text_input(
+                        "Edit Name", 
+                        value=st.session_state.edited_resume_data.get("name", ""),
+                        label_visibility="collapsed"
+                    )
+                
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col1:
+                    st.write("Email:")
+                with col2:
+                    st.session_state.edited_resume_data["email"] = st.text_input(
+                        "Edit Email", 
+                        value=st.session_state.edited_resume_data.get("email", ""),
+                        label_visibility="collapsed"
+                    )
+                
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col1:
+                    st.write("Phone:")
+                with col2:
+                    st.session_state.edited_resume_data["phone"] = st.text_input(
+                        "Edit Phone", 
+                        value=st.session_state.edited_resume_data.get("phone", ""),
+                        label_visibility="collapsed"
+                    )
+                
+                # Display and edit sections
+                st.subheader("Resume Sections")
+                
+                # Create a copy of sections to avoid modifying during iteration
+                sections = st.session_state.edited_resume_data.get("sections", {}).copy()
+                
+                # Add option to create a new section
+                with st.expander("➕ Add New Section"):
+                    new_section_name = st.text_input("New Section Name", key="new_section_name")
+                    new_section_content = st.text_area("New Section Content", key="new_section_content", height=150)
+                    if st.button("Add Section"):
+                        if new_section_name and new_section_content:
+                            # Add the new section to the edited sections
+                            sections[new_section_name] = new_section_content
+                            st.session_state.edited_resume_data["sections"] = sections
+                            st.success(f"Added new section: {new_section_name}")
+                            st.rerun()
+                        else:
+                            st.warning("Please provide both a section name and content.")
+                
+                # Display existing sections with edit capabilities
+                for section_name, section_content in sections.items():
+                    with st.expander(f"📝 {section_name}"):
+                        edited_content = st.text_area(
+                            f"Edit {section_name}", 
+                            value=section_content,
+                            height=150,
+                            key=f"edit_{section_name}"
+                        )
+                        
+                        col1, col2 = st.columns([1, 1])
+                        with col1:
+                            if st.button(f"Update {section_name}", key=f"update_{section_name}"):
+                                sections[section_name] = edited_content
+                                st.session_state.edited_resume_data["sections"] = sections
+                                st.success(f"Updated {section_name}")
+                        with col2:
+                            if st.button(f"Delete {section_name}", key=f"delete_{section_name}"):
+                                del sections[section_name]
+                                st.session_state.edited_resume_data["sections"] = sections
+                                st.warning(f"Deleted {section_name}")
+                                st.rerun()
+                
+                # Apply all changes button
+                if st.button("Apply All Changes to Resume"):
+                    st.session_state.resume_data = st.session_state.edited_resume_data.copy()
+                    st.success("All changes applied successfully!")
+                    
+                st.divider()
+                st.info("Note: Changes will be reflected in your portfolio when you preview or generate it.")
             
             # Theme selection
             # Use the themes from session state
