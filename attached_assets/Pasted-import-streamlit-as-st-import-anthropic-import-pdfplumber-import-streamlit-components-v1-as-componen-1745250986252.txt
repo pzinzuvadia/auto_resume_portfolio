@@ -1,0 +1,120 @@
+import streamlit as st
+import anthropic
+import pdfplumber
+import streamlit.components.v1 as components
+
+# ✅ Load Claude API Key from Streamlit secrets
+claude_api_key = st.secrets["ANTHROPIC"]["CLAUDE_API_KEY"]
+client = anthropic.Anthropic(api_key=claude_api_key)
+
+def extract_text_from_resume_sectionwise(file):
+    """
+    Extracts text from a PDF resume and organizes it into sections.
+
+    Args:
+        file: Uploaded PDF file.
+
+    Returns:
+        A dictionary with section names as keys and extracted text as values.
+    """
+    sections = {}
+    extracted_text = ""
+
+    try:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages:
+                extracted_text += page.extract_text() + "\n"
+
+        # Basic section extraction (Modify based on resume format)
+        section_markers = ["Experience", "Education", "Skills", "Projects", "Certifications", "Publications"]
+        current_section = "General Information"
+        sections[current_section] = ""
+
+        for line in extracted_text.split("\n"):
+            if any(marker in line for marker in section_markers):
+                current_section = line.strip()
+                sections[current_section] = ""
+            sections[current_section] += line + "\n"
+
+    except Exception as e:
+        sections["Error"] = str(e)
+
+    return sections
+
+def generate_portfolio(resume_sections, user_preferences):
+    """
+    Generates an HTML portfolio using Claude API based on extracted resume content and user preferences.
+
+    Args:
+        resume_sections: Dictionary containing extracted resume sections.
+        user_preferences: User-defined preferences for the portfolio.
+
+    Returns:
+        HTML code as a string.
+    """
+    structured_resume = "\n\n".join([f"{section}:\n{content}" for section, content in resume_sections.items()])
+    
+    prompt = (
+        "Based on the following resume content (section-wise):\n\n"
+        f"{structured_resume}\n\n"
+        "and the following design preferences:\n"
+        f"{user_preferences}\n\n"
+        "Generate a complete, modern, responsive, and professional static HTML portfolio website code."
+    )
+    
+    try:
+        response = client.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=2000,
+            temperature=0.7,
+            system="You are an expert in generating professional portfolios.",  # ✅ System message moved here
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return "\n".join([message.text for message in response.content])
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def main():
+    st.title("AI-Powered Portfolio Generator")
+    st.write("Upload your resume to generate a structured portfolio website.")
+    
+    uploaded_file = st.file_uploader("Upload your resume (PDF or TXT)", type=["pdf", "txt"])
+    user_preferences = st.text_area("Enter your design preferences (e.g., colors, layout, fonts):", "")
+    
+    if uploaded_file:
+        try:
+            file_extension = uploaded_file.name.split('.')[-1].lower()
+            if file_extension == "pdf":
+                resume_sections = extract_text_from_resume_sectionwise(uploaded_file)
+            elif file_extension == "txt":
+                resume_text = uploaded_file.read().decode("utf-8", errors="ignore")
+                resume_sections = {"Full Resume": resume_text}  # Treat as one section
+            else:
+                st.error("Unsupported file type.")
+                return
+        except Exception as e:
+            st.error(f"Error extracting text: {e}")
+            return
+        
+        # Display extracted resume sections
+        st.subheader("Extracted Resume Sections")
+        for section, content in resume_sections.items():
+            with st.expander(section):
+                st.write(content)
+        
+        if st.button("Generate Portfolio"):
+            with st.spinner("Generating your portfolio..."):
+                html_code = generate_portfolio(resume_sections, user_preferences)
+            if "Error" in html_code:
+                st.error(html_code)
+            else:
+                st.success("Portfolio generated successfully!")
+                st.code(html_code, language="html")
+                components.html(html_code, height=600, scrolling=True)
+                st.download_button("Download Portfolio", data=html_code, file_name="portfolio.html", mime="text/html")
+
+if __name__ == "__main__":
+    main()
