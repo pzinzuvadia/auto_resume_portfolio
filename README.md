@@ -62,11 +62,28 @@ A powerful AI-powered portfolio generator that transforms resume data into profe
 
 ## Deployment
 
+### Local Deployment
+
 This application consists of two components:
 - A Streamlit frontend running on port 5000
 - A FastAPI backend running on port 8000
 
-Both services are required for the application to function properly.
+Both services are required for the application to function properly. Use the `start.sh` script to run both services simultaneously.
+
+### Streamlit Cloud Deployment
+
+To deploy to Streamlit Cloud:
+
+1. Fork this repository to your GitHub account
+2. Sign in to [Streamlit Cloud](https://streamlit.io/cloud)
+3. Click "New app" and select this repository
+4. Set the main file path to: `streamlit_app.py`
+5. Add the required secrets in the Streamlit Cloud dashboard:
+   - `ANTHROPIC_API_KEY`: Your Anthropic API key
+   - Add any other secrets needed for your database connection
+6. Deploy the app
+
+The `streamlit_app.py` file is specifically designed to start both the FastAPI backend and Streamlit frontend in a deployment environment.
 
 ## Privacy
 
