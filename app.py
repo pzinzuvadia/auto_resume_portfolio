@@ -167,12 +167,23 @@ def main():
             if st.button("Extract Resume Information"):
                 with st.spinner("Extracting information from your resume..."):
                     try:
+                        # Use nest_asyncio to allow running asyncio in Streamlit
+                        import nest_asyncio
+                        nest_asyncio.apply()
+                        
+                        # Create a new event loop
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        
                         # Get resume information
-                        st.session_state.resume_data = asyncio.run(extract_resume_info(uploaded_file))
+                        st.session_state.resume_data = loop.run_until_complete(extract_resume_info(uploaded_file))
                         st.success("Resume information extracted successfully!")
                         
                         # Get available themes
-                        st.session_state.themes = asyncio.run(get_themes())
+                        st.session_state.themes = loop.run_until_complete(get_themes())
+                        
+                        # Cleanup
+                        loop.close()
                         
                         # Suggest going to the next tab
                         st.info("Proceed to the 'Customize Theme' tab to continue.")
@@ -201,8 +212,8 @@ def main():
                         st.write(section_content)
             
             # Theme selection
-            themes = asyncio.run(get_themes())
-            theme = st.selectbox("Select a theme for your portfolio", themes)
+            # Use the themes from session state
+            theme = st.selectbox("Select a theme for your portfolio", st.session_state.themes)
             
             # Theme description
             theme_descriptions = {
@@ -233,8 +244,19 @@ def main():
                                 "accent_color": accent_color
                             }
                             
+                            # Use nest_asyncio to allow running asyncio in Streamlit
+                            import nest_asyncio
+                            nest_asyncio.apply()
+                            
+                            # Create a new event loop
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            
                             # Generate preview
-                            preview_data = asyncio.run(generate_portfolio(resume_data, theme, claude_api_key))
+                            preview_data = loop.run_until_complete(generate_portfolio(resume_data, theme, claude_api_key))
+                            
+                            # Cleanup
+                            loop.close()
                             
                             # Show preview
                             st.subheader("Theme Preview")
@@ -277,13 +299,27 @@ def main():
                     with st.spinner("Saving your portfolio..."):
                         try:
                             theme = st.session_state.resume_data.get("theme_preferences", {}).get("theme", "Professional Classic")
-                            portfolio_id = asyncio.run(save_portfolio(
+                            
+                            # Use nest_asyncio for async operations
+                            import nest_asyncio
+                            nest_asyncio.apply()
+                            
+                            # Create a new event loop
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            
+                            # Save portfolio
+                            portfolio_id = loop.run_until_complete(save_portfolio(
                                 email=email,
                                 portfolio_name=portfolio_name,
                                 resume_data=st.session_state.resume_data,
                                 theme=theme,
                                 html_content=st.session_state.generated_portfolio["html"]
                             ))
+                            
+                            # Cleanup
+                            loop.close()
+                            
                             st.success(f"Portfolio saved successfully! Portfolio ID: {portfolio_id}")
                             st.info("You can view all your saved portfolios in the 'My Portfolios' page.")
                         except Exception as e:

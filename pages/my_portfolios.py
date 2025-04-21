@@ -88,7 +88,18 @@ def main():
         try:
             # Get user portfolios
             with st.spinner("Loading portfolios..."):
-                portfolios = asyncio.run(get_user_portfolios(email))
+                # Use nest_asyncio to allow running asyncio in Streamlit
+                import nest_asyncio
+                nest_asyncio.apply()
+                
+                # Create a new event loop
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                portfolios = loop.run_until_complete(get_user_portfolios(email))
+                
+                # Cleanup
+                loop.close()
             
             if not portfolios:
                 st.info("You don't have any saved portfolios yet.")
@@ -117,7 +128,18 @@ def main():
                             st.session_state.selected_portfolio_id = portfolio["id"]
                             # Get portfolio details
                             with st.spinner("Loading portfolio..."):
-                                st.session_state.selected_portfolio_data = asyncio.run(get_portfolio(portfolio["id"]))
+                                # Use nest_asyncio to allow running asyncio in Streamlit
+                                import nest_asyncio
+                                nest_asyncio.apply()
+                                
+                                # Create a new event loop
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                
+                                st.session_state.selected_portfolio_data = loop.run_until_complete(get_portfolio(portfolio["id"]))
+                                
+                                # Cleanup
+                                loop.close()
             
             # Display selected portfolio
             if st.session_state.selected_portfolio_id and st.session_state.selected_portfolio_data:
@@ -170,7 +192,19 @@ def main():
                     if st.session_state.selected_portfolio_id:
                         with st.spinner("Deleting portfolio..."):
                             try:
-                                deleted = asyncio.run(delete_portfolio(st.session_state.selected_portfolio_id))
+                                # Use nest_asyncio to allow running asyncio in Streamlit
+                                import nest_asyncio
+                                nest_asyncio.apply()
+                                
+                                # Create a new event loop
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                
+                                deleted = loop.run_until_complete(delete_portfolio(st.session_state.selected_portfolio_id))
+                                
+                                # Cleanup
+                                loop.close()
+                                
                                 if deleted:
                                     st.success("Portfolio deleted successfully!")
                                     st.session_state.selected_portfolio_id = None
