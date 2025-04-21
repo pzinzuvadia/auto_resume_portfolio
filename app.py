@@ -97,6 +97,28 @@ async def generate_portfolio(resume_data, theme, claude_api_key):
     except Exception as e:
         raise Exception(f"Failed to generate portfolio: {str(e)}")
 
+# Function to save portfolio
+async def save_portfolio(email, portfolio_name, resume_data, theme, html_content):
+    try:
+        # Prepare form data
+        data = {
+            "email": email,
+            "resume_data": json.dumps(resume_data),
+            "theme": theme,
+            "html_content": html_content,
+            "portfolio_name": portfolio_name
+        }
+        
+        # Call the save portfolio API
+        result = await call_api("/save-portfolio", method="POST", data=data)
+        
+        if result["status"] == "success":
+            return result["portfolio_id"]
+        else:
+            raise Exception(result.get("message", "Unknown error"))
+    except Exception as e:
+        raise Exception(f"Failed to save portfolio: {str(e)}")
+
 # Main application
 def main():
     # Title and description
@@ -241,6 +263,33 @@ def main():
             # Display the generated portfolio
             st.subheader("Your Generated Portfolio")
             components.html(st.session_state.generated_portfolio["html"], height=500, scrolling=True)
+            
+            # Save portfolio section
+            st.subheader("Save Your Portfolio")
+            col1, col2 = st.columns(2)
+            with col1:
+                email = st.text_input("Email address", key="save_email")
+            with col2:
+                portfolio_name = st.text_input("Portfolio name", value="My Professional Portfolio")
+                
+            if st.button("Save Portfolio"):
+                if email:
+                    with st.spinner("Saving your portfolio..."):
+                        try:
+                            theme = st.session_state.resume_data.get("theme_preferences", {}).get("theme", "Professional Classic")
+                            portfolio_id = asyncio.run(save_portfolio(
+                                email=email,
+                                portfolio_name=portfolio_name,
+                                resume_data=st.session_state.resume_data,
+                                theme=theme,
+                                html_content=st.session_state.generated_portfolio["html"]
+                            ))
+                            st.success(f"Portfolio saved successfully! Portfolio ID: {portfolio_id}")
+                            st.info("You can view all your saved portfolios in the 'My Portfolios' page.")
+                        except Exception as e:
+                            show_error(str(e))
+                else:
+                    st.warning("Please enter your email address to save the portfolio.")
             
             # Download options
             st.subheader("Download Options")
