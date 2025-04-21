@@ -378,15 +378,18 @@ def main():
                 # Display and edit sections
                 st.subheader("Resume Sections")
                 
-                # Create a copy of sections to avoid modifying during iteration
-                sections = st.session_state.edited_resume_data.get("sections", {}).copy()
+                # Section tabs: manage sections outside of the main expander
+                section_tabs = st.tabs(["Add New Section", "Edit Existing Sections"])
                 
-                # Add option to create a new section
-                with st.expander("➕ Add New Section"):
+                with section_tabs[0]:
+                    # Add option to create a new section
+                    st.subheader("➕ Add New Section")
                     new_section_name = st.text_input("New Section Name", key="new_section_name")
                     new_section_content = st.text_area("New Section Content", key="new_section_content", height=150)
                     if st.button("Add Section"):
                         if new_section_name and new_section_content:
+                            # Create a copy of sections to avoid modifying during iteration
+                            sections = st.session_state.edited_resume_data.get("sections", {}).copy()
                             # Add the new section to the edited sections
                             sections[new_section_name] = new_section_content
                             st.session_state.edited_resume_data["sections"] = sections
@@ -395,28 +398,36 @@ def main():
                         else:
                             st.warning("Please provide both a section name and content.")
                 
-                # Display existing sections with edit capabilities
-                for section_name, section_content in sections.items():
-                    with st.expander(f"📝 {section_name}"):
-                        edited_content = st.text_area(
-                            f"Edit {section_name}", 
-                            value=section_content,
-                            height=150,
-                            key=f"edit_{section_name}"
-                        )
+                with section_tabs[1]:
+                    # Get sections
+                    sections = st.session_state.edited_resume_data.get("sections", {}).copy()
+                    if not sections:
+                        st.info("No sections available to edit. Add sections in the 'Add New Section' tab.")
+                    else:
+                        # Create a selectbox to choose which section to edit
+                        section_to_edit = st.selectbox("Select section to edit:", list(sections.keys()))
                         
-                        col1, col2 = st.columns([1, 1])
-                        with col1:
-                            if st.button(f"Update {section_name}", key=f"update_{section_name}"):
-                                sections[section_name] = edited_content
-                                st.session_state.edited_resume_data["sections"] = sections
-                                st.success(f"Updated {section_name}")
-                        with col2:
-                            if st.button(f"Delete {section_name}", key=f"delete_{section_name}"):
-                                del sections[section_name]
-                                st.session_state.edited_resume_data["sections"] = sections
-                                st.warning(f"Deleted {section_name}")
-                                st.rerun()
+                        if section_to_edit:
+                            st.subheader(f"Editing: {section_to_edit}")
+                            edited_content = st.text_area(
+                                f"Section Content", 
+                                value=sections[section_to_edit],
+                                height=200,
+                                key=f"edit_{section_to_edit}"
+                            )
+                            
+                            col1, col2 = st.columns([1, 1])
+                            with col1:
+                                if st.button(f"Update Section", key=f"update_{section_to_edit}"):
+                                    sections[section_to_edit] = edited_content
+                                    st.session_state.edited_resume_data["sections"] = sections
+                                    st.success(f"Updated {section_to_edit}")
+                            with col2:
+                                if st.button(f"Delete Section", key=f"delete_{section_to_edit}"):
+                                    del sections[section_to_edit]
+                                    st.session_state.edited_resume_data["sections"] = sections
+                                    st.warning(f"Deleted {section_to_edit}")
+                                    st.rerun()
                 
                 # Apply all changes button
                 if st.button("Apply All Changes to Resume"):
