@@ -40,18 +40,18 @@ class ResumeProcessor:
         Returns:
             Dictionary with section names as keys and content as values.
         """
-        # Common section headers in resumes
+        # Common section headers in resumes (expanded patterns with more variations)
         section_patterns = [
-            r'(EDUCATION|ACADEMIC BACKGROUND)',
-            r'(EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT|PROFESSIONAL EXPERIENCE)',
-            r'(SKILLS|TECHNICAL SKILLS|KEY SKILLS)',
-            r'(PROJECTS|KEY PROJECTS)',
-            r'(CERTIFICATIONS|CERTIFICATES)',
-            r'(PUBLICATIONS|RESEARCH)',
-            r'(AWARDS|HONORS|ACHIEVEMENTS)',
-            r'(VOLUNTEER|COMMUNITY SERVICE)',
-            r'(LANGUAGES|LANGUAGE PROFICIENCY)',
-            r'(INTERESTS|HOBBIES)'
+            r'(EDUCATION|ACADEMIC|QUALIFICATION|DEGREE|UNIVERSITY|SCHOOL)',
+            r'(EXPERIENCE|EMPLOYMENT|PROFESSIONAL|WORK HISTORY|CAREER|JOB)',
+            r'(SKILLS|TECHNICAL|TECHNOLOGIES|TOOLS|COMPETENCIES|PROFICIENCIES)',
+            r'(PROJECTS|PORTFOLIO|WORKS|ASSIGNMENTS|IMPLEMENTATIONS)',
+            r'(CERTIFICATIONS|CERTIFICATES|LICENSES|ACCREDITATIONS)',
+            r'(PUBLICATIONS|RESEARCH|PAPERS|JOURNALS|ARTICLES)',
+            r'(AWARDS|HONORS|ACHIEVEMENTS|RECOGNITIONS|ACCOMPLISHMENTS)',
+            r'(VOLUNTEER|COMMUNITY|SERVICE|SOCIAL WORK)',
+            r'(LANGUAGES|LANGUAGE PROFICIENCY|FLUENCY)',
+            r'(INTERESTS|HOBBIES|ACTIVITIES|PASSIONS)'
         ]
         
         # Combine patterns into a single regex
@@ -68,7 +68,33 @@ class ResumeProcessor:
         
         # Extract each section
         for i, match in enumerate(matches):
-            section_name = match.group(0).strip()
+            # Get the matched section name and standardize it
+            matched_text = match.group(0).strip()
+            
+            # Standardize section names for consistency
+            if re.search(r'education|academic|qualification|degree|university|school', matched_text, re.IGNORECASE):
+                section_name = "EDUCATION"
+            elif re.search(r'experience|employment|professional|work history|career|job', matched_text, re.IGNORECASE):
+                section_name = "EXPERIENCE" 
+            elif re.search(r'skills|technical|technologies|tools|competencies|proficiencies', matched_text, re.IGNORECASE):
+                section_name = "SKILLS"
+            elif re.search(r'projects|portfolio|works|assignments|implementations', matched_text, re.IGNORECASE):
+                section_name = "PROJECTS"
+            elif re.search(r'certifications|certificates|licenses|accreditations', matched_text, re.IGNORECASE):
+                section_name = "CERTIFICATIONS"
+            elif re.search(r'publications|research|papers|journals|articles', matched_text, re.IGNORECASE):
+                section_name = "PUBLICATIONS"
+            elif re.search(r'awards|honors|achievements|recognitions|accomplishments', matched_text, re.IGNORECASE):
+                section_name = "AWARDS"
+            elif re.search(r'volunteer|community|service|social work', matched_text, re.IGNORECASE):
+                section_name = "VOLUNTEER"
+            elif re.search(r'languages|language proficiency|fluency', matched_text, re.IGNORECASE):
+                section_name = "LANGUAGES"
+            elif re.search(r'interests|hobbies|activities|passions', matched_text, re.IGNORECASE):
+                section_name = "INTERESTS"
+            else:
+                section_name = matched_text.upper()
+                
             start_index = match.start()
             
             # Determine the end of the current section
@@ -79,7 +105,12 @@ class ResumeProcessor:
             
             # Extract section content
             section_content = text[start_index:end_index].strip()
-            sections[section_name] = section_content
+            
+            # If we already have this section, append new content
+            if section_name in sections:
+                sections[section_name] += "\n\n" + section_content
+            else:
+                sections[section_name] = section_content
         
         # Extract header information (assume it's before the first section)
         if matches and matches[0].start() > 0:

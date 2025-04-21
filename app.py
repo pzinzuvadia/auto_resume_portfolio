@@ -463,8 +463,14 @@ def main():
                 if claude_api_key:
                     with st.spinner("Generating theme preview..."):
                         try:
-                            # Update resume data with selected preferences
-                            resume_data = st.session_state.resume_data.copy()
+                            # Always use the most recent edited resume data for generating the portfolio
+                            if "edited_resume_data" in st.session_state:
+                                resume_data = st.session_state.edited_resume_data.copy()
+                                # Update the main resume data with edited data for consistency
+                                st.session_state.resume_data = st.session_state.edited_resume_data.copy()
+                            else:
+                                resume_data = st.session_state.resume_data.copy()
+                                
                             resume_data["theme_preferences"] = {
                                 "theme": theme,
                                 "accent_color": accent_color
