@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # API endpoints
-API_URL = "http://0.0.0.0:8000"  # FastAPI backend
+API_URL = "https://auto-resume-portfolio-1.onrender.com"  # FastAPI backend
 
 # Function to display formatted error messages
 def show_error(message):
